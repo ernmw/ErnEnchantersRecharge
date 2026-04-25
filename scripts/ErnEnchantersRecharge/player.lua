@@ -141,6 +141,44 @@ local listHeaderLayout = {
     },
 }
 
+local function barLayout(ratio, relativeLength)
+    return {
+        type = ui.TYPE.Widget,
+        name = 'bar',
+        template = interfaces.MWUI.templates.borders,
+        props = {
+            relativeSize = util.vector2(relativeLength or 1, 0),
+            size = util.vector2(0, 8)
+        },
+        content = ui.content {
+            {
+                type = ui.TYPE.Image,
+                name = 'barContainer',
+                props = {
+                    resource = ui.texture { path = 'white' },
+                    relativePosition = util.vector2(0, 0),
+                    relativeSize = util.vector2(1, 1),
+                    alpha = 0.7,
+                    color = util.color.rgb(0.1, 0.1, 0.1),
+                },
+                events = {},
+            },
+            {
+                type = ui.TYPE.Image,
+                name = 'barFill',
+                props = {
+                    resource = ui.texture { path = 'Textures/ErnEnchantersRecharge/horz_gradient.dds' },
+                    anchor = util.vector2(0, 0),
+                    --relativePosition = util.vector2(0, 1),
+                    relativeSize = util.vector2(ratio, 1),
+                    alpha = 0.7,
+                    color = myui.textColors.magic_fill,
+                },
+            },
+        }
+    }
+end
+
 ---@param recharge RechargeEntity
 ---@return table
 local function rechargableItemLayout(recharge, list, enchanter)
@@ -164,17 +202,32 @@ local function rechargableItemLayout(recharge, list, enchanter)
                     size = util.vector2(32, 32)
                 },
             },
+            myui.padWidget(4, 0),
             {
-                template = interfaces.MWUI.templates.textHeader,
-                type = ui.TYPE.Text,
-                name = "itemName",
+                type = ui.TYPE.Flex,
                 props = {
-                    text = recharge.record.name,
-                    textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
-                    textAlignV = ui.ALIGNMENT.Center,
+                    name = "row_" .. recharge.record.name,
+                    arrange = ui.ALIGNMENT.Start,
+                    horizontal = false,
+                    size = itemSize,
                 },
-                external = { grow = 1 }
+                external = { grow = 1 },
+                content = ui.content {
+                    {
+                        template = interfaces.MWUI.templates.textHeader,
+                        type = ui.TYPE.Text,
+                        name = "itemName",
+                        props = {
+                            text = recharge.record.name,
+                            textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                            textAlignV = ui.ALIGNMENT.Center,
+                        },
+                    },
+                    myui.padWidget(0, 2),
+                    barLayout(recharge.charge / recharge.capacity, 0.7),
+                },
             },
+            myui.padWidget(4, 0),
             {
                 template = interfaces.MWUI.templates.textHeader,
                 type = ui.TYPE.Text,
@@ -249,7 +302,11 @@ updateCancelButtonElement()
 local List = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list.extras").VirtualListExt
 
 
-
+local stretchPaddingLayout = {
+    name = 'stretchPadWidget',
+    props = { size = util.vector2(1, 1) },
+    external = { grow = 1 }
+}
 
 local function openRechargeWindow(enchanter)
     items = getRechargableItems()
@@ -291,12 +348,15 @@ local function openRechargeWindow(enchanter)
                 props = {
                     arrange = ui.ALIGNMENT.Center,
                     horizontal = false,
-                    autoSize = true,
+                    autoSize = false,
+                    relativeSize = util.vector2(1, 1)
                     --size = itemSize,
                 },
                 content = ui.content {
                     listHeaderLayout,
+                    stretchPaddingLayout,
                     list:getElement(),
+                    stretchPaddingLayout,
                     cancelButtonElement,
                 }
             }

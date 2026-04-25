@@ -15,4 +15,22 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ]]
-local world = require('openmw.world')
+local MOD_NAME = require("scripts.ErnEnchantersRecharge.ns")
+local core     = require("openmw.core")
+local world    = require('openmw.world')
+
+local function onRecharge(data)
+    -- remove the money
+    local gold = data.player.type.inventory(data.player):find("gold_001")
+    gold:remove(data.cost)
+    -- increase the charges
+    -- TODO
+    -- notify UI we are done
+    data.player:sendEvent(MOD_NAME .. 'onUpdateUI', { item = data.item })
+end
+
+return {
+    eventHandlers = {
+        [MOD_NAME .. 'onRecharge'] = onRecharge,
+    }
+}

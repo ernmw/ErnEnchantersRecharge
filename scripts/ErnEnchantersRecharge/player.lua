@@ -33,9 +33,19 @@ local topic        = string.lower(localization("topic"))
 
 pself.type.addTopic(pself, topic)
 
+---@return integer
+local function cost(charge, capacity, enchanter)
+    local base = (capacity - charge) * 1.3
+    local playerBarter = pself.type.stats.skills.mercantile(pself).modified
+    local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
+
+    return math.ceil(util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
+end
+
 ---@class RechargeEntity
 ---@field charge number
 ---@field capacity number
+---@field cost number
 ---@field record any
 ---@field item any
 
@@ -43,7 +53,7 @@ pself.type.addTopic(pself, topic)
 ---@param item any
 ---@param record any
 ---@return RechargeEntity?
-local function missingCharge(item, record)
+local function missingCharge(item, record, enchanter)
     if record.enchant == nil then
         return nil
     end
@@ -63,36 +73,27 @@ local function missingCharge(item, record)
         capacity = enchantRecord.charge,
         record = record,
         item = item,
+        cost = cost(data.enchantmentCharge, enchantRecord.charge, enchanter)
     }
 end
 
----@param recharge RechargeEntity
----@return integer
-local function cost(recharge, enchanter)
-    local base = (recharge.capacity - recharge.charge) * 1.3
-    local playerBarter = pself.type.stats.skills.mercantile(pself).modified
-    local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
-
-    return math.ceil(util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
-end
-
 ---@return RechargeEntity[]
-local function getRechargableItems()
+local function getRechargableItems(enchanter)
     local out = {}
     for _, item in ipairs(pself.type.inventory(pself):getAll(types.Weapon)) do
-        local recharge = missingCharge(item, types.Weapon.record(item))
+        local recharge = missingCharge(item, types.Weapon.record(item), enchanter)
         if recharge then
             table.insert(out, recharge)
         end
     end
     for _, item in ipairs(pself.type.inventory(pself):getAll(types.Armor)) do
-        local recharge = missingCharge(item, types.Armor.record(item))
+        local recharge = missingCharge(item, types.Armor.record(item), enchanter)
         if recharge then
             table.insert(out, recharge)
         end
     end
     for _, item in ipairs(pself.type.inventory(pself):getAll(types.Clothing)) do
-        local recharge = missingCharge(item, types.Clothing.record(item))
+        local recharge = missingCharge(item, types.Clothing.record(item), enchanter)
         if recharge then
             table.insert(out, recharge)
         end
@@ -179,6 +180,42 @@ local function barLayout(ratio, relativeLength)
     }
 end
 
+local function currentGold()
+    return pself.type.inventory(pself):countOf("gold_001")
+end
+
+local currentGoldElement = ui.create {}
+local function updateCurrentGoldElement()
+    currentGoldElement.layout = {
+        template = interfaces.MWUI.templates.textHeader,
+        type = ui.TYPE.Text,
+        name = "cost",
+        props = {
+            text = localization("currentGold", { gold = currentGold() }),
+            textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+            textAlignV = ui.ALIGNMENT.Center,
+            textAlignH = ui.ALIGNMENT.End,
+        }
+    }
+    currentGoldElement:update()
+end
+updateCurrentGoldElement()
+
+
+---@param recharge RechargeEntity
+local function doRecharge(recharge)
+    local gp = currentGold()
+    if gp <= recharge.cost then
+        ambient.playSoundFile("sound\\ErnEnchantersRecharge\\cancel.mp3")
+        return
+    end
+    core.sendGlobalEvent(MOD_NAME .. 'onRecharge', {
+        player = pself,
+        cost = recharge.cost,
+        item = recharge.item
+    })
+end
+
 ---@param recharge RechargeEntity
 ---@return table
 local function rechargableItemLayout(recharge, list, enchanter)
@@ -233,7 +270,7 @@ local function rechargableItemLayout(recharge, list, enchanter)
                 type = ui.TYPE.Text,
                 name = "cost",
                 props = {
-                    text = tostring(cost(recharge, enchanter)),
+                    text = tostring(recharge.cost),
                     textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
                     textAlignV = ui.ALIGNMENT.Center,
                     textAlignH = ui.ALIGNMENT.Start,
@@ -247,6 +284,7 @@ local function rechargableItemLayout(recharge, list, enchanter)
         mousePress = async:callback(function(e)
             if e.button == 1 then
                 ambient.playSound("menu click")
+                doRecharge(recharge)
                 ui.showMessage("Mouse press: " .. recharge.record.name)
             end
         end),
@@ -298,6 +336,7 @@ local function updateCancelButtonElement()
 end
 updateCancelButtonElement()
 
+
 ---@type VirtualListExt
 local List = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list.extras").VirtualListExt
 
@@ -309,7 +348,7 @@ local stretchPaddingLayout = {
 }
 
 local function openRechargeWindow(enchanter)
-    items = getRechargableItems()
+    items = getRechargableItems(enchanter)
     print("Found " .. #items .. " rechargeable items.")
 
     interfaces.UI.addMode("Interface", { windows = {} })
@@ -364,11 +403,16 @@ local function openRechargeWindow(enchanter)
     })
 end
 
+local function onUpdateUI()
+    updateCurrentGoldElement()
+    -- todo: remove the item from the list?
+end
 
 
 
 return {
     eventHandlers = {
+        [MOD_NAME .. "onUpdateUI"] = onUpdateUI,
         UiModeChanged = UiModeChanged,
         DialogueResponse = function(e)
             print(e.recordId)

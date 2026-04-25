@@ -22,6 +22,8 @@ local pself        = require("openmw.self")
 local ui           = require("openmw.ui")
 local types        = require("openmw.types")
 local util         = require("openmw.util")
+local async        = require("openmw.async")
+local ambient      = require("openmw.ambient")
 local input        = require("openmw.input")
 
 local interfaces   = require('openmw.interfaces')
@@ -30,6 +32,16 @@ local topic        = string.lower(localization("topic"))
 
 pself.type.addTopic(pself, topic)
 
+---@class RechargeEntity
+---@field charge number
+---@field capacity number
+---@field record any
+---@field item any
+
+---comment
+---@param item any
+---@param record any
+---@return RechargeEntity?
 local function missingCharge(item, record)
     if record.enchant == nil then
         return nil
@@ -53,6 +65,17 @@ local function missingCharge(item, record)
     }
 end
 
+---@param recharge RechargeEntity
+---@return integer
+local function cost(recharge, enchanter)
+    local base = (recharge.capacity - recharge.charge) * 1.3
+    local playerBarter = pself.type.stats.skills.mercantile(pself).modified
+    local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
+
+    return math.ceil(util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
+end
+
+---@return RechargeEntity[]
 local function getRechargableItems()
     local out = {}
     for _, item in ipairs(pself.type.inventory(pself):getAll(types.Weapon)) do
@@ -77,6 +100,108 @@ local function getRechargableItems()
     return out
 end
 
+local windowPosition = util.vector2(0.5, 0.5)
+local windowSize = util.vector2(420, 450)
+local itemSize = util.vector2(400, 32)
+local viewportSize = util.vector2(420, 400)
+
+local listHeaderLayout = {
+    type = ui.TYPE.Flex,
+    props = {
+        arrange = ui.ALIGNMENT.Center,
+        horizontal = true,
+        autoSize = false,
+        size = itemSize,
+    },
+    content = ui.content {
+        {
+            template = interfaces.MWUI.templates.textHeader,
+            type = ui.TYPE.Text,
+            name = "itemName",
+            props = {
+                text = localization("magicalItems"),
+                textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                textAlignV = ui.ALIGNMENT.Center,
+            },
+            external = { grow = 1 }
+        },
+        {
+            template = interfaces.MWUI.templates.textHeader,
+            type = ui.TYPE.Text,
+            name = "cost",
+            props = {
+                text = localization("cost"),
+                textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                textAlignV = ui.ALIGNMENT.Center,
+                textAlignH = ui.ALIGNMENT.Start,
+                anchor = util.vector2(1, 0.5)
+            }
+        }
+    },
+}
+
+---@param recharge RechargeEntity
+---@return table
+local function rechargableItemLayout(recharge, list, enchanter)
+    local layout = {
+        type = ui.TYPE.Flex,
+        props = {
+            name = "row_" .. recharge.record.name,
+            arrange = ui.ALIGNMENT.Center,
+            horizontal = true,
+            autoSize = false,
+            size = itemSize,
+        },
+        content = ui.content {
+            {
+                type = ui.TYPE.Image,
+                name = "itemIcon",
+                props = {
+                    resource = ui.texture {
+                        path = recharge.record.icon
+                    },
+                    size = util.vector2(32, 32)
+                },
+            },
+            {
+                template = interfaces.MWUI.templates.textHeader,
+                type = ui.TYPE.Text,
+                name = "itemName",
+                props = {
+                    text = recharge.record.name,
+                    textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                    textAlignV = ui.ALIGNMENT.Center,
+                },
+                external = { grow = 1 }
+            },
+            {
+                template = interfaces.MWUI.templates.textHeader,
+                type = ui.TYPE.Text,
+                name = "cost",
+                props = {
+                    text = tostring(cost(recharge, enchanter)),
+                    textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                    textAlignV = ui.ALIGNMENT.Center,
+                    textAlignH = ui.ALIGNMENT.Start,
+                    anchor = util.vector2(1, 0.5)
+                }
+            }
+        },
+    }
+
+    layout.events = {
+        mousePress = async:callback(function(e)
+            if e.button == 1 then
+                ambient.playSound("menu click")
+                ui.showMessage("Mouse press: " .. recharge.record.name)
+            end
+        end),
+    }
+
+
+    return layout
+end
+
 local window
 local items = {}
 
@@ -93,9 +218,7 @@ end
 local List = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list.extras").VirtualListExt
 
 
-local windowPosition = util.vector2(0.5, 0.5)
-local windowSize = util.vector2(400, 400)
-local itemSize = util.vector2(400, 20)
+
 
 local function openRechargeWindow(enchanter)
     items = getRechargableItems()
@@ -104,22 +227,11 @@ local function openRechargeWindow(enchanter)
     interfaces.UI.addMode("Interface", { windows = {} })
     -- Note the list must know the sizes involved to do its math.
     local list = List.create({
-        viewportSize = windowSize,
+        viewportSize = viewportSize,
         itemSize = itemSize,
         itemCount = #items,
         itemLayout = function(i, list)
-            return list:createItemLayout({
-                index = i,
-                props = {
-                    text = items[i].record.name,
-                },
-                onMousePress = function(e) -- Optional mouse press handler
-                    if e.button == 1 then
-                        list:changeSelection(i)
-                        ui.showMessage("Mouse press: " .. items[i].record.name)
-                    end
-                end,
-            })
+            return rechargableItemLayout(items[i], list, enchanter)
         end,
     })
 
@@ -142,7 +254,12 @@ local function openRechargeWindow(enchanter)
             relativePosition = windowPosition,
             resource = ui.texture({ path = "black" }),
         },
-        content = ui.content({ list:getElement() }),
+        content = ui.content(
+            {
+                listHeaderLayout,
+                list:getElement(),
+            }
+        ),
     })
 end
 

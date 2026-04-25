@@ -1,0 +1,4 @@
+# The ordering of these next two is critical.
+
+PLAYER:scripts/ErnEnchantersRecharge/player.lua
+GLOBAL:scripts/ErnEnchantersRecharge/global.lua

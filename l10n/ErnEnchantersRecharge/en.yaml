@@ -1,0 +1,5 @@
+name: "ErnEnchantersRecharge"
+description: "Enchanters can recharge your enchanted gear for a small fee."
+
+# This needs to match the topic in the omwaddon
+topic: "recharge your equipment"

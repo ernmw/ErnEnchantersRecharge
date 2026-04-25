@@ -195,6 +195,9 @@ local function updateCurrentGoldElement()
             textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
             textAlignV = ui.ALIGNMENT.Center,
             textAlignH = ui.ALIGNMENT.End,
+            relativePosition = util.vector2(1, 1),
+            anchor = util.vector2(1, 1),
+            position = util.vector2(-4, -4),
         }
     }
     currentGoldElement:update()
@@ -396,9 +399,10 @@ local function openRechargeWindow(enchanter)
                     stretchPaddingLayout,
                     list:getElement(),
                     stretchPaddingLayout,
-                    cancelButtonElement,
+                    cancelButtonElement
                 }
-            }
+            },
+            currentGoldElement,
         }
     })
 end

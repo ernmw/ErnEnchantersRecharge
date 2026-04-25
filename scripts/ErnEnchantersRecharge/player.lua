@@ -25,6 +25,7 @@ local util         = require("openmw.util")
 local async        = require("openmw.async")
 local ambient      = require("openmw.ambient")
 local input        = require("openmw.input")
+local myui         = require('scripts.ErnEnchantersRecharge.pcp.myui')
 
 local interfaces   = require('openmw.interfaces')
 
@@ -101,7 +102,7 @@ local function getRechargableItems()
 end
 
 local windowPosition = util.vector2(0.5, 0.5)
-local windowSize = util.vector2(420, 450)
+local windowSize = util.vector2(420, 500)
 local itemSize = util.vector2(400, 32)
 local viewportSize = util.vector2(420, 400)
 
@@ -205,14 +206,44 @@ end
 local window
 local items = {}
 
--- close window
-local function UiModeChanged(data)
-    if window ~= nil and ((data.newMode == nil) or (data.newMode ~= "Interface")) then
+local function closeWindow()
+    if window ~= nil then
         window:destroy()
         window = nil
         items = {}
+        -- check if nothing is visible
+        if interfaces.UI.getMode() == "Interface" then
+            local somethingVisible = false
+            for wind in pairs(interfaces.UI.getWindowsForMode("Interface")) do
+                somethingVisible = somethingVisible or interfaces.UI.isWindowVisible(wind)
+            end
+            if not somethingVisible then
+                interfaces.UI.removeMode("Interface")
+            end
+        end
     end
 end
+
+-- close window
+local function UiModeChanged(data)
+    if (data.newMode == nil) or (data.newMode ~= "Interface") then
+        closeWindow()
+    end
+end
+
+local cancelButtonElement = ui.create {}
+local function updateCancelButtonElement()
+    cancelButtonElement.layout = myui.createTextButton(
+        cancelButtonElement,
+        localization("cancel"),
+        "normal",
+        "cancelButton",
+        {},
+        util.vector2(60, 20),
+        closeWindow)
+    cancelButtonElement:update()
+end
+updateCancelButtonElement()
 
 ---@type VirtualListExt
 local List = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list.extras").VirtualListExt
@@ -254,12 +285,22 @@ local function openRechargeWindow(enchanter)
             relativePosition = windowPosition,
             resource = ui.texture({ path = "black" }),
         },
-        content = ui.content(
+        content = ui.content {
             {
-                listHeaderLayout,
-                list:getElement(),
+                type = ui.TYPE.Flex,
+                props = {
+                    arrange = ui.ALIGNMENT.Center,
+                    horizontal = false,
+                    autoSize = true,
+                    --size = itemSize,
+                },
+                content = ui.content {
+                    listHeaderLayout,
+                    list:getElement(),
+                    cancelButtonElement,
+                }
             }
-        ),
+        }
     })
 end
 

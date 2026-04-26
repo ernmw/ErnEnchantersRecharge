@@ -56,6 +56,13 @@ end
 ---@param record any
 ---@return RechargeEntity?
 local function missingCharge(item, record, enchanter)
+    if not item:isValid() then
+        return nil
+    end
+    if item.count > 1 then
+        -- stacks are so busted
+        return nil
+    end
     if record.enchant == nil then
         return nil
     end
@@ -100,7 +107,12 @@ local function getRechargableItems(enchanter)
             table.insert(out, recharge)
         end
     end
-    table.sort(out, function(a, b) return a.record.name < b.record.name end)
+    table.sort(out, function(a, b)
+        if a.record.name == b.record.name then
+            return a.item.id < b.item.id
+        end
+        return a.record.name < b.record.name
+    end)
     return out
 end
 
@@ -369,8 +381,8 @@ end
 
 
 local function closeWindow()
-    if window ~= nil then
-        window:destroy()
+    if window or itemList then
+        if window then window:destroy() end
         window = nil
         enchanter = nil
         items = {}
@@ -485,10 +497,11 @@ local function onUpdateUI()
     items = getRechargableItems(enchanter)
     print("Found " .. #items .. " rechargeable items.")
     itemList:rebuild(#items)
+    itemList.visibleRange = nil
     if #items == 0 then
         selectedIndex = nil
         itemList:redraw()
-    elseif selectedIndex > #items then
+    elseif selectedIndex and selectedIndex > #items then
         selectedIndex = #items
         itemList:redraw()
     end

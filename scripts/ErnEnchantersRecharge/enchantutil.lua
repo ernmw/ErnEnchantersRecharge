@@ -15,16 +15,14 @@ local core = require('openmw.core')
 -- local multiplier = enchanting.getChargeMultiplier(core.magic.ENCHANTMENT_TYPE.WhenUsed)
 
 local function getChargeMultiplier(enchantmentType)
-    local settings = core.magic.getGMST
-
     if enchantmentType == core.magic.ENCHANTMENT_TYPE.CastOnce then
-        return core.magic.getGMST('iMagicItemChargeOnce') or 1
-    elseif enchantmentType == core.magic.ENCHANTMENT_TYPE.WhenStrikes then
-        return core.magic.getGMST('iMagicItemChargeStrike') or 1
-    elseif enchantmentType == core.magic.ENCHANTMENT_TYPE.WhenUsed then
-        return core.magic.getGMST('iMagicItemChargeUse') or 1
+        return core.getGMST('iMagicItemChargeOnce') or 1
+    elseif enchantmentType == core.magic.ENCHANTMENT_TYPE.CastOnStrike then
+        return core.getGMST('iMagicItemChargeStrike') or 1
+    elseif enchantmentType == core.magic.ENCHANTMENT_TYPE.CastOnUse then
+        return core.getGMST('iMagicItemChargeUse') or 1
     elseif enchantmentType == core.magic.ENCHANTMENT_TYPE.ConstantEffect then
-        return core.magic.getGMST('iMagicItemChargeConst') or 1
+        return core.getGMST('iMagicItemChargeConst') or 1
     end
 
     return 1
@@ -46,8 +44,8 @@ local function getEffectCost(effect, enchantmentType)
         return 0
     end
 
-    local fEffectCostMult = core.magic.getGMST('fEffectCostMult') or 1.0
-    local fEnchantmentConstantDurationMult = core.magic.getGMST('fEnchantmentConstantDurationMult') or 1.0
+    local fEffectCostMult = core.getGMST('fEffectCostMult') or 1.0
+    local fEnchantmentConstantDurationMult = core.getGMST('fEnchantmentConstantDurationMult') or 1.0
 
     -- Get magic effect base cost
     local magicEffect = core.magic.effects.records[effect.mData.mEffectID]
@@ -102,7 +100,7 @@ local function getMaxEnchantmentPoints(item)
     local enchantPoints = item.enchantmentPoints or 0
 
     -- Multiply by the enchantment multiplier setting
-    local fEnchantmentMult = core.magic.getGMST('fEnchantmentMult') or 1.0
+    local fEnchantmentMult = core.getGMST('fEnchantmentMult') or 1.0
 
     return math.floor(enchantPoints * fEnchantmentMult)
 end

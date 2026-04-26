@@ -25,6 +25,7 @@ local util         = require("openmw.util")
 local async        = require("openmw.async")
 local ambient      = require("openmw.ambient")
 local input        = require("openmw.input")
+local enchantUtil  = require('scripts.ErnEnchantersRecharge.enchantutil')
 local myui         = require('scripts.ErnEnchantersRecharge.pcp.myui')
 local virtualList  = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list")
 local keytrack     = require("scripts.ErnEnchantersRecharge.keytrack")
@@ -69,10 +70,19 @@ local function missingCharge(item, record, enchanter)
     end
     -- enchantRecord.charge is not the same as item max charge capacity!!!
     -- this returns 105 for "steel staff of the ancestors", but that max charge is actually 75
+    -- 105 is for the enchantment record, but that's not the whole story.
+    -- the staff item itself has a "Enchantment Points" value of 70.
+    --
     local enchantRecord = core.magic.enchantments.records[record.enchant]
     if enchantRecord.type == core.magic.ENCHANTMENT_TYPE.CastOnce or enchantRecord.type == core.magic.ENCHANTMENT_TYPE.ConstantEffect then
         return nil
     end
+
+    local capacity = enchantUtil.getMaxEnchantmentCharge(enchantRecord)
+    if capacity < 1 then
+        return nil
+    end
+
     local data = types.Item.itemData(item)
     if not data or (data.enchantmentCharge == nil) then
         return nil
@@ -83,7 +93,7 @@ local function missingCharge(item, record, enchanter)
 
     local out = {
         charge = data.enchantmentCharge,
-        capacity = enchantRecord.charge,
+        capacity = capacity,
         record = record,
         item = item,
         cost = cost(data.enchantmentCharge, enchantRecord.charge, enchanter)

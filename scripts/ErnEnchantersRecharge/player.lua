@@ -234,17 +234,6 @@ local selectedIndex = nil
 ---@type number?
 local focusIndex = nil
 
-local function updateRowColor(element, selected, hovered)
-    local layout = element.layout or element
-    if selected then
-        layout.content["rowBG"].props.color = myui.interactiveTextColors.normal.default
-    elseif hovered then
-        layout.content["rowBG"].props.color = myui.interactiveTextColors.normal.over
-    else
-        layout.content["rowBG"].props.color = util.color.rgb(0, 0, 0)
-    end
-    pcall(function() element:update() end)
-end
 
 ---@param recharge RechargeEntity
 ---@return table
@@ -351,13 +340,13 @@ local function rechargableItemLayout(recharge, idx, isSelected, isFocus, list)
 
     rowContainer.events = {
         focusGain = async:callback(function(_, element)
-            print("focus on " .. tostring(idx))
+            --print("focus on " .. tostring(idx))
             focusIndex = idx
             --updateRowColor(element, idx == selectedIndex, true)
             itemList:redraw()
         end),
         focusLoss = async:callback(function(_, element)
-            print("focus off " .. tostring(idx))
+            --print("focus off " .. tostring(idx))
             --updateRowColor(element, idx == selectedIndex, false)
             if focusIndex == idx then
                 focusIndex = nil
@@ -484,6 +473,13 @@ local function onUpdateUI()
     items = getRechargableItems(enchanter)
     print("Found " .. #items .. " rechargeable items.")
     itemList:rebuild(#items)
+    if #items == 0 then
+        selectedIndex = nil
+        itemList:redraw()
+    elseif selectedIndex > #items then
+        selectedIndex = #items
+        itemList:redraw()
+    end
 end
 
 local stickDeadzone = 0.3
@@ -535,7 +531,14 @@ local function onFrame(dt)
             print("selected " .. tostring(selectedIndex))
         end
         if keys.enter.fall then
-            doRecharge(items[selectedIndex])
+            if selectedIndex then
+                doRecharge(items[selectedIndex])
+            elseif #items > 0 then
+                selectedIndex = 1
+                itemList:redraw()
+            elseif #items == 0 then
+                closeWindow()
+            end
         end
     end
 end
@@ -553,7 +556,12 @@ return {
     },
     engineHandlers = {
         -- Optional mouse wheel handling for scrolling.
-        --onMouseWheel = List.getMouseWheelHandler(),
+        onMouseWheel = function(vertical, horizontal)
+            if itemList then
+                --print("scrollin'")
+                itemList:getMouseWheelHandler()(vertical, horizontal)
+            end
+        end,
         onFrame = onFrame,
     },
 }

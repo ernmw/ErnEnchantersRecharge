@@ -404,7 +404,11 @@ local function updateCancelButtonElement()
         localization("cancel"),
         "normal",
         "cancelButton",
-        {},
+        {
+            relativePosition = util.vector2(0.5, 1),
+            anchor = util.vector2(0.5, 1),
+            position = util.vector2(0, -4),
+        },
         util.vector2(60, 20),
         closeWindow)
     cancelButtonElement:update()
@@ -460,10 +464,18 @@ local function openRechargeWindow(enchanterActor)
                     stretchPaddingLayout,
                     itemList:getElement(),
                     stretchPaddingLayout,
-                    cancelButtonElement
+                    {
+                        type = ui.TYPE.Widget,
+                        props = {
+                            size = itemSize,
+                        },
+                        content = ui.content {
+                            cancelButtonElement,
+                            currentGoldElement,
+                        }
+                    },
                 }
             },
-            currentGoldElement,
         }
     })
 end

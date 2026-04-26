@@ -26,6 +26,7 @@ local async        = require("openmw.async")
 local ambient      = require("openmw.ambient")
 local input        = require("openmw.input")
 local myui         = require('scripts.ErnEnchantersRecharge.pcp.myui')
+local virtualList  = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list")
 local keytrack     = require("scripts.ErnEnchantersRecharge.keytrack")
 
 local interfaces   = require('openmw.interfaces')
@@ -228,10 +229,24 @@ local window
 local enchanter
 local items = {}
 local itemList
+---@type number?
+local selectedIndex = nil
+
+local function updateRowColor(element, selected, hovered)
+    local layout = element.layout or element
+    if selected then
+        layout.content["rowBG"].props.color = myui.interactiveTextColors.normal.default
+    elseif hovered then
+        layout.content["rowBG"].props.color = myui.interactiveTextColors.normal.over
+    else
+        layout.content["rowBG"].props.color = util.color.rgb(0, 0, 0)
+    end
+    pcall(function() element:update() end)
+end
 
 ---@param recharge RechargeEntity
 ---@return table
-local function rechargableItemLayout(recharge, idx, list, enchanter)
+local function rechargableItemLayout(recharge, idx, isSelected, list)
     local layout = {
         type = ui.TYPE.Flex,
         name = "row_" .. recharge.record.name,
@@ -303,7 +318,7 @@ local function rechargableItemLayout(recharge, idx, list, enchanter)
             relativeSize = util.vector2(1, 1),
             alpha = 0.2,
             --color = util.color.rgb(0, 0, 0),
-            color = list:getColor(idx)
+            color = isSelected and myui.interactiveTextColors.normal.default or util.color.rgb(0, 0, 0)
         }
     }
 
@@ -313,7 +328,7 @@ local function rechargableItemLayout(recharge, idx, list, enchanter)
         name = 'row',
         props = {
             relativePosition = util.vector2(0, 0),
-            relativeSize = util.vector2(1, 1),
+            --relativeSize = util.vector2(1, 1),
             --alpha = 1,
             --color = util.color.rgb(0, 0, 0),
             --
@@ -326,13 +341,13 @@ local function rechargableItemLayout(recharge, idx, list, enchanter)
     }
 
     rowContainer.events = {
-        mouseMove = async:callback(function()
+        mouseMove = async:callback(function(_, element)
             print("focus on " .. tostring(idx))
-            itemList:updateOverColor(rowBG, idx)
+            --updateRowColor(element, idx == selectedIndex, true)
         end),
-        focusLoss = async:callback(function()
+        focusLoss = async:callback(function(_, element)
             print("focus off " .. tostring(idx))
-            itemList:updateColor(rowBG, idx)
+            --updateRowColor(element, idx == selectedIndex, false)
         end),
         mousePress = async:callback(function(e)
             if e.button == 1 then
@@ -347,7 +362,6 @@ local function rechargableItemLayout(recharge, idx, list, enchanter)
 
     return rowContainer
 end
-
 
 
 local function closeWindow()
@@ -392,10 +406,6 @@ end
 updateCancelButtonElement()
 
 
----@type VirtualListExt
-local List = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list.extras").VirtualListExt
-
-
 local stretchPaddingLayout = {
     name = 'stretchPadWidget',
     props = { size = util.vector2(1, 1) },
@@ -409,12 +419,12 @@ local function openRechargeWindow(enchanterActor)
 
     interfaces.UI.addMode("Interface", { windows = {} })
     -- Note the list must know the sizes involved to do its math.
-    itemList = List.create({
+    itemList = virtualList.create({
         viewportSize = viewportSize,
         itemSize = itemSize,
         itemCount = #items,
         itemLayout = function(i, list)
-            return rechargableItemLayout(items[i], i, list, enchanter)
+            return rechargableItemLayout(items[i], i, i == selectedIndex, list)
         end,
     })
 
@@ -494,17 +504,18 @@ local function onFrame(dt)
             inp:update(dt)
         end
 
-        local idx = itemList:getSelectedIndex() or 0
+        local idx = selectedIndex or 0
 
         if keys.backward.fall then
-            idx = wrapIndex(idx + 1, #items)
-            itemList:changeSelection(idx)
-            print("selected " .. tostring(idx))
+            selectedIndex = wrapIndex(idx + 1, #items)
+            itemList:syncVisibleItems()
+            --updateRowColor()
+            print("selected " .. tostring(selectedIndex))
         end
         if keys.forward.fall then
-            idx = wrapIndex(idx + 1, #items)
-            itemList:changeSelection(idx)
-            print("selected " .. tostring(idx))
+            selectedIndex = wrapIndex(idx - 1, #items)
+            itemList:syncVisibleItems()
+            print("selected " .. tostring(selectedIndex))
         end
     end
 end
@@ -522,7 +533,7 @@ return {
     },
     engineHandlers = {
         -- Optional mouse wheel handling for scrolling.
-        onMouseWheel = List.getMouseWheelHandler(),
+        --onMouseWheel = List.getMouseWheelHandler(),
         onFrame = onFrame,
     },
 }

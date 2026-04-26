@@ -508,13 +508,21 @@ local function onFrame(dt)
 
         if keys.backward.fall then
             selectedIndex = wrapIndex(idx + 1, #items)
-            itemList:syncVisibleItems()
+            if itemList:getVisibleRange().start > selectedIndex or itemList:getVisibleRange().stop < selectedIndex then
+                print("move window backward")
+                itemList:scrollToIndex(selectedIndex, "bottom")
+            end
+            itemList:redraw()
             --updateRowColor()
             print("selected " .. tostring(selectedIndex))
         end
         if keys.forward.fall then
             selectedIndex = wrapIndex(idx - 1, #items)
-            itemList:syncVisibleItems()
+            if itemList:getVisibleRange().start > selectedIndex or itemList:getVisibleRange().stop < selectedIndex then
+                print("move window forward")
+                itemList:scrollToIndex(selectedIndex, "top")
+            end
+            itemList:redraw()
             print("selected " .. tostring(selectedIndex))
         end
     end

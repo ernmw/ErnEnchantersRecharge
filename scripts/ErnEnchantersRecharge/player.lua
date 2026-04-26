@@ -231,6 +231,8 @@ local items = {}
 local itemList
 ---@type number?
 local selectedIndex = nil
+---@type number?
+local focusIndex = nil
 
 local function updateRowColor(element, selected, hovered)
     local layout = element.layout or element
@@ -246,7 +248,7 @@ end
 
 ---@param recharge RechargeEntity
 ---@return table
-local function rechargableItemLayout(recharge, idx, isSelected, list)
+local function rechargableItemLayout(recharge, idx, isSelected, isFocus, list)
     local layout = {
         type = ui.TYPE.Flex,
         name = "row_" .. recharge.record.name,
@@ -309,6 +311,13 @@ local function rechargableItemLayout(recharge, idx, isSelected, list)
         },
     }
 
+    local bgColor = util.color.rgb(0, 0, 0)
+    if isSelected then
+        bgColor = myui.interactiveTextColors.normal.default
+    elseif isFocus then
+        bgColor = myui.interactiveTextColors.normal.over
+    end
+
     local rowBG = {
         type = ui.TYPE.Image,
         name = 'rowBG',
@@ -318,7 +327,7 @@ local function rechargableItemLayout(recharge, idx, isSelected, list)
             relativeSize = util.vector2(1, 1),
             alpha = 0.2,
             --color = util.color.rgb(0, 0, 0),
-            color = isSelected and myui.interactiveTextColors.normal.default or util.color.rgb(0, 0, 0)
+            color = bgColor
         }
     }
 
@@ -341,13 +350,19 @@ local function rechargableItemLayout(recharge, idx, isSelected, list)
     }
 
     rowContainer.events = {
-        mouseMove = async:callback(function(_, element)
+        focusGain = async:callback(function(_, element)
             print("focus on " .. tostring(idx))
+            focusIndex = idx
             --updateRowColor(element, idx == selectedIndex, true)
+            itemList:redraw()
         end),
         focusLoss = async:callback(function(_, element)
             print("focus off " .. tostring(idx))
             --updateRowColor(element, idx == selectedIndex, false)
+            if focusIndex == idx then
+                focusIndex = nil
+            end
+            itemList:redraw()
         end),
         mousePress = async:callback(function(e)
             if e.button == 1 then
@@ -371,6 +386,8 @@ local function closeWindow()
         enchanter = nil
         items = {}
         itemList = nil
+        selectedIndex = nil
+        focusIndex = nil
         -- check if nothing is visible
         if interfaces.UI.getMode() == "Interface" then
             local somethingVisible = false
@@ -424,7 +441,7 @@ local function openRechargeWindow(enchanterActor)
         itemSize = itemSize,
         itemCount = #items,
         itemLayout = function(i, list)
-            return rechargableItemLayout(items[i], i, i == selectedIndex, list)
+            return rechargableItemLayout(items[i], i, i == selectedIndex, i == focusIndex, list)
         end,
     })
 
@@ -479,17 +496,9 @@ local keys          = {
         return input.isKeyPressed(input.KEY.DownArrow) or
             (input.getAxisValue(input.CONTROLLER_AXIS.RightY) > stickDeadzone)
     end),
-    left     = keytrack.NewKey("left", function(dt)
-        return input.isKeyPressed(input.KEY.LeftArrow) or
-            (input.getAxisValue(input.CONTROLLER_AXIS.RightX) < -1 * stickDeadzone)
-    end),
-    right    = keytrack.NewKey("right", function(dt)
-        return input.isKeyPressed(input.KEY.RightArrow) or
-            (input.getAxisValue(input.CONTROLLER_AXIS.RightX) > stickDeadzone)
-    end),
     enter    = keytrack.NewKey("enter", function(dt)
         return input.isKeyPressed(input.KEY.Enter) or
-            (input.getAxisValue(input.CONTROLLER_BUTTON.A) > stickDeadzone)
+            (input.isControllerButtonPressed(input.CONTROLLER_BUTTON.A))
     end),
 }
 
@@ -524,6 +533,9 @@ local function onFrame(dt)
             end
             itemList:redraw()
             print("selected " .. tostring(selectedIndex))
+        end
+        if keys.enter.fall then
+            doRecharge(items[selectedIndex])
         end
     end
 end

@@ -122,7 +122,7 @@ local listHeaderLayout = {
             name = "itemName",
             props = {
                 text = localization("magicalItems"),
-                textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                textColor = myui.textColors.header,
                 textAlignV = ui.ALIGNMENT.Center,
             },
             external = { grow = 1 }
@@ -133,7 +133,7 @@ local listHeaderLayout = {
             name = "cost",
             props = {
                 text = localization("cost"),
-                textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                textColor = myui.textColors.header,
                 textAlignV = ui.ALIGNMENT.Center,
                 textAlignH = ui.ALIGNMENT.Start,
                 anchor = util.vector2(1, 0.5)
@@ -192,7 +192,7 @@ local function updateCurrentGoldElement()
         name = "cost",
         props = {
             text = localization("currentGold", { gold = currentGold() }),
-            textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+            textColor = myui.interactiveTextColors.normal.default,
             textAlignV = ui.ALIGNMENT.Center,
             textAlignH = ui.ALIGNMENT.End,
             relativePosition = util.vector2(1, 1),
@@ -215,7 +215,9 @@ local function doRecharge(recharge)
     core.sendGlobalEvent(MOD_NAME .. 'onRecharge', {
         player = pself,
         cost = recharge.cost,
-        item = recharge.item
+        item = recharge.item,
+        charge = recharge.charge,
+        capacity = recharge.capacity
     })
 end
 
@@ -259,7 +261,7 @@ local function rechargableItemLayout(recharge, list, enchanter)
                         name = "itemName",
                         props = {
                             text = recharge.record.name,
-                            textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                            textColor = myui.interactiveTextColors.normal.default,
                             textAlignV = ui.ALIGNMENT.Center,
                         },
                     },
@@ -274,7 +276,7 @@ local function rechargableItemLayout(recharge, list, enchanter)
                 name = "cost",
                 props = {
                     text = tostring(recharge.cost),
-                    textColor = util.color.rgb(223 / 255, 201 / 255, 159 / 255),
+                    textColor = myui.interactiveTextColors.normal.default,
                     textAlignV = ui.ALIGNMENT.Center,
                     textAlignH = ui.ALIGNMENT.Start,
                     anchor = util.vector2(1, 0.5)
@@ -298,12 +300,14 @@ local function rechargableItemLayout(recharge, list, enchanter)
 end
 
 local window
+local enchanter
 local items = {}
 
 local function closeWindow()
     if window ~= nil then
         window:destroy()
         window = nil
+        enchanter = nil
         items = {}
         -- check if nothing is visible
         if interfaces.UI.getMode() == "Interface" then
@@ -350,13 +354,16 @@ local stretchPaddingLayout = {
     external = { grow = 1 }
 }
 
-local function openRechargeWindow(enchanter)
+local itemList
+
+local function openRechargeWindow(enchanterActor)
+    enchanter = enchanterActor
     items = getRechargableItems(enchanter)
     print("Found " .. #items .. " rechargeable items.")
 
     interfaces.UI.addMode("Interface", { windows = {} })
     -- Note the list must know the sizes involved to do its math.
-    local list = List.create({
+    itemList = List.create({
         viewportSize = viewportSize,
         itemSize = itemSize,
         itemCount = #items,
@@ -366,9 +373,9 @@ local function openRechargeWindow(enchanter)
     })
 
     -- Optionally we can set a key press handler for the list.
-    list:setKeyPressHandler({
+    itemList:setKeyPressHandler({
         setSelectedIndex = function(i)
-            list:changeSelection(i)
+            itemList:changeSelection(i)
             ui.showMessage("Key press: " .. items[i])
         end,
     })
@@ -397,7 +404,7 @@ local function openRechargeWindow(enchanter)
                 content = ui.content {
                     listHeaderLayout,
                     stretchPaddingLayout,
-                    list:getElement(),
+                    itemList:getElement(),
                     stretchPaddingLayout,
                     cancelButtonElement
                 }
@@ -409,7 +416,9 @@ end
 
 local function onUpdateUI()
     updateCurrentGoldElement()
-    -- todo: remove the item from the list?
+    items = getRechargableItems(enchanter)
+    print("Found " .. #items .. " rechargeable items.")
+    itemList:rebuild(#items)
 end
 
 

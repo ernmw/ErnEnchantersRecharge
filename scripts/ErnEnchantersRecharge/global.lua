@@ -18,13 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 local MOD_NAME = require("scripts.ErnEnchantersRecharge.ns")
 local core     = require("openmw.core")
 local world    = require('openmw.world')
+local types    = require('openmw.types')
 
 local function onRecharge(data)
+    -- increase the charges
+    local itemData = types.Item.itemData(data.item)
+    if not itemData or (itemData.enchantmentCharge == nil) then
+        return nil
+    end
+    itemData.enchantmentCharge = data.capacity
     -- remove the money
     local gold = data.player.type.inventory(data.player):find("gold_001")
     gold:remove(data.cost)
-    -- increase the charges
-    -- TODO
     -- notify UI we are done
     data.player:sendEvent(MOD_NAME .. 'onUpdateUI', { item = data.item })
 end

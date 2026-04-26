@@ -23,10 +23,12 @@ local types    = require('openmw.types')
 local function onRecharge(data)
     -- increase the charges
     local itemData = types.Item.itemData(data.item)
-    if not itemData or (itemData.enchantmentCharge == nil) then
+    if not itemData or (itemData.enchantmentCharge == nil) or (itemData.enchantmentCharge == data.capacity) then
+        print("BAD ITEM!")
         return nil
     end
-    itemData.enchantmentCharge = data.capacity
+    --itemData.enchantmentCharge = data.capacity
+    itemData.enchantmentCharge = nil
     -- remove the money
     local gold = data.player.type.inventory(data.player):find("gold_001")
     gold:remove(data.cost)

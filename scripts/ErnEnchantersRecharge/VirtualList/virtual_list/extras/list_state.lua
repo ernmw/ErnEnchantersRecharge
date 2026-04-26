@@ -24,7 +24,6 @@ function ListState.new(element)
     return setmetatable({ element = element }, ListState):resetSelection()
 end
 
-
 ---@param element VirtualListElement
 ---@return ListState
 function ListState.from(element)
@@ -36,7 +35,6 @@ function ListState.from(element)
     return userData.listState
 end
 
-
 --- Reset the lists internal selection state. Does not trigger UI updates!
 ---
 ---@return ListState
@@ -46,18 +44,15 @@ function ListState:resetSelection()
     return self
 end
 
-
 ---@return number?
 function ListState:getSelectedIndex()
     return self.selectedIndex
 end
 
-
 ---@param index number?
 function ListState:setSelectedIndex(index)
     self.selectedIndex = index
 end
-
 
 ---@param index number
 ---@return boolean
@@ -65,25 +60,21 @@ function ListState:isSelected(index)
     return self.selectedIndex == index
 end
 
-
 ---@return number?
 function ListState:getPressedIndex()
     return self.pressedIndex
 end
-
 
 ---@param index number?
 function ListState:setPressedIndex(index)
     self.pressedIndex = index
 end
 
-
 ---@param index number
 ---@return boolean
 function ListState:isPressed(index)
     return self.pressedIndex == index
 end
-
 
 ---
 --- Font Color Methods
@@ -100,35 +91,31 @@ function ListState:getOverColor(index)
     return FontColors.getOverColor(self:isSelected(index))
 end
 
-
 ---@param index number
 ---@return Color
 function ListState:getColor(index)
     return FontColors.getColor(self:isSelected(index), self:isPressed(index))
 end
 
-
 ---@param layout Layout
 ---@param index number
 function ListState:updateColor(layout, index)
     local textColor = self:getColor(index)
-    if layout.props.textColor ~= textColor then
-        layout.props.textColor = textColor
+    if layout.props.color ~= textColor then
+        layout.props.color = textColor
         pcall(function() self.element:update() end)
     end
 end
-
 
 ---@param layout Layout
 ---@param index number
 function ListState:updateOverColor(layout, index)
     local textColor = self:getOverColor(index)
-    if layout.props.textColor ~= textColor then
-        layout.props.textColor = textColor
+    if layout.props.color ~= textColor then
+        layout.props.color = textColor
         pcall(function() self.element:update() end)
     end
 end
-
 
 --- Convenience method to change the selected item and update the appropriate text colors.
 ---
@@ -145,6 +132,7 @@ function ListState:changeSelection(newIndex, getTextLayout)
 
     self:setSelectedIndex(newIndex)
 
+    print("updating color from selection")
     local previous = getTextLayout(oldIndex)
     if previous then
         self:updateColor(previous, oldIndex)
@@ -155,6 +143,5 @@ function ListState:changeSelection(newIndex, getTextLayout)
         self:updateColor(current, newIndex)
     end
 end
-
 
 return ListState

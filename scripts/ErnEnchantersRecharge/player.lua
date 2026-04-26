@@ -26,6 +26,7 @@ local async        = require("openmw.async")
 local ambient      = require("openmw.ambient")
 local input        = require("openmw.input")
 local myui         = require('scripts.ErnEnchantersRecharge.pcp.myui')
+local keytrack     = require("scripts.ErnEnchantersRecharge.keytrack")
 
 local interfaces   = require('openmw.interfaces')
 
@@ -98,7 +99,7 @@ local function getRechargableItems(enchanter)
             table.insert(out, recharge)
         end
     end
-    table.sort(out, function(a, b) return a.record.name > b.record.name end)
+    table.sort(out, function(a, b) return a.record.name < b.record.name end)
     return out
 end
 
@@ -116,6 +117,7 @@ local listHeaderLayout = {
         size = itemSize,
     },
     content = ui.content {
+        myui.padWidget(4, 0),
         {
             template = interfaces.MWUI.templates.textHeader,
             type = ui.TYPE.Text,
@@ -138,7 +140,8 @@ local listHeaderLayout = {
                 textAlignH = ui.ALIGNMENT.Start,
                 anchor = util.vector2(1, 0.5)
             }
-        }
+        },
+        myui.padWidget(4, 0),
     },
 }
 
@@ -221,19 +224,25 @@ local function doRecharge(recharge)
     })
 end
 
+local window
+local enchanter
+local items = {}
+local itemList
+
 ---@param recharge RechargeEntity
 ---@return table
-local function rechargableItemLayout(recharge, list, enchanter)
+local function rechargableItemLayout(recharge, idx, list, enchanter)
     local layout = {
         type = ui.TYPE.Flex,
+        name = "row_" .. recharge.record.name,
         props = {
-            name = "row_" .. recharge.record.name,
             arrange = ui.ALIGNMENT.Center,
             horizontal = true,
             autoSize = false,
             size = itemSize,
         },
         content = ui.content {
+            myui.padWidget(4, 0),
             {
                 type = ui.TYPE.Image,
                 name = "itemIcon",
@@ -247,8 +256,8 @@ local function rechargableItemLayout(recharge, list, enchanter)
             myui.padWidget(4, 0),
             {
                 type = ui.TYPE.Flex,
+                name = "row_" .. recharge.record.name,
                 props = {
-                    name = "row_" .. recharge.record.name,
                     arrange = ui.ALIGNMENT.Start,
                     horizontal = false,
                     size = itemSize,
@@ -285,23 +294,61 @@ local function rechargableItemLayout(recharge, list, enchanter)
         },
     }
 
-    layout.events = {
-        mousePress = async:callback(function(e)
-            if e.button == 1 then
-                ambient.playSound("menu click")
-                doRecharge(recharge)
-                ui.showMessage("Mouse press: " .. recharge.record.name)
-            end
-        end),
+    local rowBG = {
+        type = ui.TYPE.Image,
+        name = 'rowBG',
+        props = {
+            resource = ui.texture { path = 'white' },
+            relativePosition = util.vector2(0, 0),
+            relativeSize = util.vector2(1, 1),
+            alpha = 0.2,
+            --color = util.color.rgb(0, 0, 0),
+            color = list:getColor(idx)
+        }
     }
 
 
-    return layout
+    local rowContainer = {
+        type = ui.TYPE.Widget,
+        name = 'row',
+        props = {
+            relativePosition = util.vector2(0, 0),
+            relativeSize = util.vector2(1, 1),
+            --alpha = 1,
+            --color = util.color.rgb(0, 0, 0),
+            --
+        },
+        events = {},
+        content = ui.content {
+            rowBG,
+            layout
+        }
+    }
+
+    rowContainer.events = {
+        mouseMove = async:callback(function()
+            print("focus on " .. tostring(idx))
+            itemList:updateOverColor(rowBG, idx)
+        end),
+        focusLoss = async:callback(function()
+            print("focus off " .. tostring(idx))
+            itemList:updateColor(rowBG, idx)
+        end),
+        mousePress = async:callback(function(e)
+            if e.button == 1 then
+                ambient.playSound("menu click")
+                --itemList:setPressedIndex(idx)
+                --itemList:changeSelection(idx, rowBG)
+                --itemList:updateColor(rowBG, idx)
+                doRecharge(recharge)
+            end
+        end)
+    }
+
+    return rowContainer
 end
 
-local window
-local enchanter
-local items = {}
+
 
 local function closeWindow()
     if window ~= nil then
@@ -309,6 +356,7 @@ local function closeWindow()
         window = nil
         enchanter = nil
         items = {}
+        itemList = nil
         -- check if nothing is visible
         if interfaces.UI.getMode() == "Interface" then
             local somethingVisible = false
@@ -354,8 +402,6 @@ local stretchPaddingLayout = {
     external = { grow = 1 }
 }
 
-local itemList
-
 local function openRechargeWindow(enchanterActor)
     enchanter = enchanterActor
     items = getRechargableItems(enchanter)
@@ -368,15 +414,7 @@ local function openRechargeWindow(enchanterActor)
         itemSize = itemSize,
         itemCount = #items,
         itemLayout = function(i, list)
-            return rechargableItemLayout(items[i], list, enchanter)
-        end,
-    })
-
-    -- Optionally we can set a key press handler for the list.
-    itemList:setKeyPressHandler({
-        setSelectedIndex = function(i)
-            itemList:changeSelection(i)
-            ui.showMessage("Key press: " .. items[i])
+            return rechargableItemLayout(items[i], i, list, enchanter)
         end,
     })
 
@@ -421,7 +459,55 @@ local function onUpdateUI()
     itemList:rebuild(#items)
 end
 
+local stickDeadzone = 0.3
+local keys          = {
+    forward  = keytrack.NewKey("forward", function(dt)
+        return input.isKeyPressed(input.KEY.UpArrow) or
+            (input.getAxisValue(input.CONTROLLER_AXIS.RightY) < -1 * stickDeadzone)
+    end),
+    backward = keytrack.NewKey("backward", function(dt)
+        return input.isKeyPressed(input.KEY.DownArrow) or
+            (input.getAxisValue(input.CONTROLLER_AXIS.RightY) > stickDeadzone)
+    end),
+    left     = keytrack.NewKey("left", function(dt)
+        return input.isKeyPressed(input.KEY.LeftArrow) or
+            (input.getAxisValue(input.CONTROLLER_AXIS.RightX) < -1 * stickDeadzone)
+    end),
+    right    = keytrack.NewKey("right", function(dt)
+        return input.isKeyPressed(input.KEY.RightArrow) or
+            (input.getAxisValue(input.CONTROLLER_AXIS.RightX) > stickDeadzone)
+    end),
+    enter    = keytrack.NewKey("enter", function(dt)
+        return input.isKeyPressed(input.KEY.Enter) or
+            (input.getAxisValue(input.CONTROLLER_BUTTON.A) > stickDeadzone)
+    end),
+}
 
+local function wrapIndex(index, length)
+    return ((index - 1) % length) + 1
+end
+
+local function onFrame(dt)
+    if window and itemList then
+        -- Track inputs.
+        for _, inp in pairs(keys) do
+            inp:update(dt)
+        end
+
+        local idx = itemList:getSelectedIndex() or 0
+
+        if keys.backward.fall then
+            idx = wrapIndex(idx + 1, #items)
+            itemList:changeSelection(idx)
+            print("selected " .. tostring(idx))
+        end
+        if keys.forward.fall then
+            idx = wrapIndex(idx + 1, #items)
+            itemList:changeSelection(idx)
+            print("selected " .. tostring(idx))
+        end
+    end
+end
 
 return {
     eventHandlers = {
@@ -437,5 +523,6 @@ return {
     engineHandlers = {
         -- Optional mouse wheel handling for scrolling.
         onMouseWheel = List.getMouseWheelHandler(),
+        onFrame = onFrame,
     },
 }

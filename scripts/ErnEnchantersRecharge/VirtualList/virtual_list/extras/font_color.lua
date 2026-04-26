@@ -30,37 +30,22 @@ function this.getNormalColor(isSelected)
     return isSelected and fontcolor_color_active or fontcolor_color_normal
 end
 
-
 ---@param isSelected boolean?
 ---@return Color
 function this.getOverColor(isSelected)
-    return isSelected and fontcolor_color_active_over or fontcolor_color_normal_over
+    return isSelected and fontcolor_color_active or fontcolor_color_normal_over
 end
-
-
----@param isSelected boolean?
----@return Color
-function this.getActiveColor(isSelected)
-    return isSelected and fontcolor_color_active_pressed or fontcolor_color_normal_pressed
-end
-
 
 ---@param isSelected boolean?
 ---@param isPressed boolean?
 ---@return Color
 function this.getColor(isSelected, isPressed)
-    if isSelected and isPressed then
-        return this.getActiveColor(isSelected)
-    else
-        return this.getNormalColor(isSelected)
-    end
+    return this.getNormalColor(isSelected)
 end
-
 
 ---@return Color
 function this.getDisabledColor()
     return fontcolor_color_disabled
 end
-
 
 return this

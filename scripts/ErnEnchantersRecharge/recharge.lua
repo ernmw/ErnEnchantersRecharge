@@ -37,13 +37,15 @@ local topic        = string.lower(localization("rechargeTopic"))
 
 pself.type.addTopic(pself, topic)
 
+local rechargeCostMult = core.getGMST('fMagicItemChargeRechargeMult') or 1.0
+
 ---@return integer
 local function cost(charge, capacity, enchanter)
     local base = (capacity - charge) * 1.3
     local playerBarter = pself.type.stats.skills.mercantile(pself).modified
     local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
 
-    return math.ceil(util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
+    return math.ceil(rechargeCostMult * util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
 end
 
 ---@class RechargeEntity
@@ -137,6 +139,7 @@ local windowPosition = util.vector2(0.5, 0.5)
 local windowSize = util.vector2(420, 500)
 local itemSize = util.vector2(400, 32)
 local viewportSize = util.vector2(420, 400)
+
 
 local listHeaderLayout = {
     type = ui.TYPE.Flex,

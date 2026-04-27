@@ -11,11 +11,16 @@ Extract to your `mods/` folder. In your `openmw.cfg` file, add these lines in th
 ```ini
 data="/wherevermymodsare/mods/ErnEnchantersRecharge-main"
 content=ErnEnchantersRecharge.omwscripts
-content=ErnEnchantersRecharge.en.omwaddon
+content=ErnEnchantersRecharge.omwaddon
 ```
 
-## Credits
+Optionally add this line to disable natural enchanted item recharging:
 
-### Sounds
-- ping.mp3 by jolup123 -- https://freesound.org/s/668790/ -- License: Creative Commons 0
-- cancel.wav by pierrecartoons1979 -- https://freesound.org/s/90119/ -- License: Attribution NonCommercial 3.0
+```ini
+content=ErnDisableNaturalRecharge.omwaddon
+```
+
+
+## Patching
+
+You can set `fMagicItemChargeRechargeMult` to change the recharge cost.

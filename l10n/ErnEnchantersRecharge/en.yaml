@@ -3,7 +3,6 @@ description: "Enchanters can recharge your enchanted gear for a small fee."
 
 # This needs to match the topic in the omwaddon
 rechargeTopic: "recharge your equipment"
-purgeTopic: "purge an enchantment"
 
 magicalItems: "Magical Items"
 cost: "Cost"

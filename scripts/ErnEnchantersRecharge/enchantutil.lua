@@ -1,19 +1,27 @@
---- Enchanting functions
--- @module enchanting
--- @usage local enchanting = require('openmw.enchanting')
+--[[
+ErnEnchantersRecharge for OpenMW.
+Copyright (C) 2026 Erin Pentecost
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+]]
 
 local core = require('openmw.core')
-
+--- Get the charge multiplier for an enchantment type from game settings.
+--- These multipliers determine how many charge points are added per base cost point.
 ---
--- Get the charge multiplier for an enchantment type from game settings.
--- These multipliers determine how many charge points are added per base cost point.
---
--- @function getChargeMultiplier
--- @param enchantmentType The enchantment type (one of core.magic.ENCHANTMENT_TYPE values)
--- @return #number The charge multiplier
--- @usage
--- local multiplier = enchanting.getChargeMultiplier(core.magic.ENCHANTMENT_TYPE.WhenUsed)
-
+--- @param enchantmentType any The enchantment type (one of core.magic.ENCHANTMENT_TYPE values)
+---@return number The charge multiplier
 local function getChargeMultiplier(enchantmentType)
     if enchantmentType == core.magic.ENCHANTMENT_TYPE.CastOnce then
         return core.getGMST('iMagicItemChargeOnce') or 1
@@ -28,19 +36,15 @@ local function getChargeMultiplier(enchantmentType)
     return 1
 end
 
+--- Calculate the cost of a single magic effect within an enchantment context.
+--- Uses the enchantment cost formula which differs from spell and potion costs.
 ---
--- Calculate the cost of a single magic effect within an enchantment context.
--- Uses the enchantment cost formula which differs from spell and potion costs.
---
--- @function getEffectCost
--- @param effect The magic effect with parameters (mData field)
--- @param enchantmentType The enchantment type for context
--- @return #number The calculated cost of this effect
--- @usage
--- local effectCost = enchanting.getEffectCost(effect, core.magic.ENCHANTMENT_TYPE.WhenUsed)
-
+--- @param effect any The magic effect with parameters (mData field)
+--- @param enchantmentType any The enchantment type for context
+--- @return number The calculated cost of this effect
 local function getEffectCost(effect, enchantmentType)
-    if not effect or not effect.mData then
+    if not effect then
+        print("no effect data")
         return 0
     end
 
@@ -48,19 +52,21 @@ local function getEffectCost(effect, enchantmentType)
     local fEnchantmentConstantDurationMult = core.getGMST('fEnchantmentConstantDurationMult') or 1.0
 
     -- Get magic effect base cost
-    local magicEffect = core.magic.effects.records[effect.mData.mEffectID]
+    local magicEffect = core.magic.effects.records[effect.id]
+    -- magicEffect is a MagicEffect
     if not magicEffect then
+        print("unknown magic effect")
         return 0
     end
 
     local baseCost = magicEffect.baseCost or 0
 
     -- Ensure min/max magnitude and area are at least 1
-    local magMin = math.max(1, effect.mData.mMagnMin or 0)
-    local magMax = math.max(1, effect.mData.mMagnMax or 0)
-    local area = math.max(1, effect.mData.mArea or 0)
+    local magMin = math.max(1, effect.magnitudeMin or 0)
+    local magMax = math.max(1, effect.magnitudeMax or 0)
+    local area = math.max(1, effect.area or 0)
 
-    local duration = effect.mData.mDuration or 0
+    local duration = effect.duration or 0
     if enchantmentType == core.magic.ENCHANTMENT_TYPE.ConstantEffect then
         duration = fEnchantmentConstantDurationMult
     end
@@ -73,24 +79,18 @@ local function getEffectCost(effect, enchantmentType)
     cost = math.max(1.0, cost)
 
     -- Apply target range multiplier
-    if effect.mData.mRange == 2 then -- ESM::RT_Target
+    if effect.range == 2 then -- ESM::RT_Target
         cost = cost * 1.5
     end
 
     return cost
 end
 
+--- Calculate the maximum enchantment points available on an item.
+--- This is the capacity of an item to be enchanted, based on its type and base properties.
 ---
--- Calculate the maximum enchantment points available on an item.
--- This is the capacity of an item to be enchanted, based on its type and base properties.
---
--- @function getMaxEnchantmentPoints
--- @param item The item object (enchantable item)
--- @return #number The maximum enchantment points available
--- @usage
--- local item = types.Item.record(myItem)
--- local maxPoints = enchanting.getMaxEnchantmentPoints(item)
-
+--- @param item any The item object (enchantable item)
+--- @return number The maximum enchantment points available
 local function getMaxEnchantmentPoints(item)
     if not item then
         return 0
@@ -105,30 +105,19 @@ local function getMaxEnchantmentPoints(item)
     return math.floor(enchantPoints * fEnchantmentMult)
 end
 
+--- Calculate the maximum charge capacity for an enchanted item.
 ---
--- Calculate the maximum charge capacity for an enchanted item.
---
--- The maximum charge depends on three factors:
--- 1. The enchantment record's charge capacity (from enchantment.charge)
--- 2. Whether the enchantment uses autocalc
--- 3. The enchantment type (CastOnce, WhenStrikes, WhenUsed, ConstantEffect)
---
--- For autocalc enchantments, the charge is calculated based on effect costs and game settings.
--- For constant effect enchantments, the maximum charge is 0 (they don't consume charge).
--- For other types, the charge multiplier from game settings determines the final capacity.
---
--- @function getMaxEnchantmentCharge
--- @param enchantment The enchantment record (from core.magic.enchantments.records)
--- @return #number The maximum charge capacity for this enchantment
--- @usage
--- local enchantment = core.magic.enchantments.records['my_enchantment_id']
--- local maxCharge = enchanting.getMaxEnchantmentCharge(enchantment)
--- if maxCharge > 0 then
---     print("This enchantment can store up to " .. maxCharge .. " charge")
--- else
---     print("This is a constant effect enchantment with no charge")
--- end
-
+--- The maximum charge depends on three factors:
+--- 1. The enchantment record's charge capacity (from enchantment.charge)
+--- 2. Whether the enchantment uses autocalc
+--- 3. The enchantment type (CastOnce, WhenStrikes, WhenUsed, ConstantEffect)
+---
+--- For autocalc enchantments, the charge is calculated based on effect costs and game settings.
+--- For constant effect enchantments, the maximum charge is 0 (they don't consume charge).
+--- For other types, the charge multiplier from game settings determines the final capacity.
+---
+--- @param enchantment any The enchantment record (from core.magic.enchantments.records)
+--- @return number The maximum charge capacity for this enchantment
 local function getMaxEnchantmentCharge(enchantment)
     if not enchantment then
         return 0
@@ -145,6 +134,7 @@ local function getMaxEnchantmentCharge(enchantment)
 
         -- Sum up all effect costs
         for _, effect in ipairs(enchantment.effects) do
+            -- effect is a MagicEffectWithParams
             baseCost = baseCost + getEffectCost(effect, enchantment.type)
         end
 

@@ -80,14 +80,17 @@ local function missingCharge(item, record, enchanter)
 
     local capacity = enchantUtil.getMaxEnchantmentCharge(enchantRecord)
     if capacity < 1 then
+        -- TODO: terrible bug. items hitting this branch
+        print("no capacity: " .. tostring(record.name))
         return nil
     end
+    print("capacity: " .. tostring(record.name) .. " - " .. tostring(capacity))
 
     local data = types.Item.itemData(item)
     if not data or (data.enchantmentCharge == nil) then
         return nil
     end
-    if data.enchantmentCharge >= enchantRecord.charge then
+    if data.enchantmentCharge >= capacity then
         return nil
     end
 
@@ -96,7 +99,7 @@ local function missingCharge(item, record, enchanter)
         capacity = capacity,
         record = record,
         item = item,
-        cost = cost(data.enchantmentCharge, enchantRecord.charge, enchanter)
+        cost = cost(data.enchantmentCharge, capacity, enchanter)
     }
     print("item missing charge: " .. aux_util.deepToString(out, 4))
     return out

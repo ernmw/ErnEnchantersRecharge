@@ -33,7 +33,7 @@ local aux_util     = require('openmw_aux.util')
 
 local interfaces   = require('openmw.interfaces')
 
-local topic        = string.lower(localization("topic"))
+local topic        = string.lower(localization("purgeTopic"))
 
 pself.type.addTopic(pself, topic)
 

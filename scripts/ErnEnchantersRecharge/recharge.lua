@@ -40,12 +40,15 @@ pself.type.addTopic(pself, topic)
 local rechargeCostMult = core.getGMST('fMagicItemChargeRechargeMult') or 1.0
 
 ---@return integer
-local function cost(charge, capacity, enchanter)
-    local base = (capacity - charge) * 1.3
+local function cost(charge, capacity, itemCost, enchanter)
+    -- you pay the square root of the total item cost, prorated by missing charge %,
+    -- plus .3 gp per missing charge.
+    local base = ((1 - (charge / capacity)) * math.sqrt(itemCost)) + (capacity - charge) * .3
+    -- costs are plus or minus 50% based on mercantile.
     local playerBarter = pself.type.stats.skills.mercantile(pself).modified
     local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
-
-    return math.ceil(rechargeCostMult * util.clamp(enchanterBarter / playerBarter, 1, 5) * base)
+    return math.ceil(rechargeCostMult * base *
+        util.remap(util.clamp(enchanterBarter / playerBarter, 0, 2), 0, 2, 0.5, 1.5))
 end
 
 ---@class RechargeEntity
@@ -99,7 +102,7 @@ local function missingCharge(item, record, enchanter)
         capacity = capacity,
         record = record,
         item = item,
-        cost = cost(data.enchantmentCharge, capacity, enchanter)
+        cost = cost(data.enchantmentCharge, capacity, record.value, enchanter)
     }
     print("item missing charge: " .. aux_util.deepToString(out, 4))
     return out
@@ -560,21 +563,21 @@ local function onFrame(dt)
         if keys.backward.fall then
             selectedIndex = wrapIndex(idx + 1, #items)
             if itemList:getVisibleRange().start > selectedIndex or itemList:getVisibleRange().stop < selectedIndex then
-                print("move window backward")
+                --print("move window backward")
                 itemList:scrollToIndex(selectedIndex, "bottom")
             end
             itemList:redraw()
             --updateRowColor()
-            print("selected " .. tostring(selectedIndex))
+            --print("selected " .. tostring(selectedIndex))
         end
         if keys.forward.fall then
             selectedIndex = wrapIndex(idx - 1, #items)
             if itemList:getVisibleRange().start > selectedIndex or itemList:getVisibleRange().stop < selectedIndex then
-                print("move window forward")
+                --print("move window forward")
                 itemList:scrollToIndex(selectedIndex, "top")
             end
             itemList:redraw()
-            print("selected " .. tostring(selectedIndex))
+            --print("selected " .. tostring(selectedIndex))
         end
         if keys.enter.fall then
             if selectedIndex then

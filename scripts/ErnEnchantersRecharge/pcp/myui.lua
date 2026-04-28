@@ -284,7 +284,7 @@ local function createButton(parent, layout, updateColor, buttonFunction, args)
         mouseRelease = async:callback(function(mouseEvent, data)
             if mouseEvent.button == 1 then
                 updateColor(layout, 'over')
-                print("clicked button")
+                --print("clicked button")
                 buttonFunction()
                 parent:update()
             end
@@ -298,7 +298,7 @@ local function createButton(parent, layout, updateColor, buttonFunction, args)
             --- as well as the mouse cursor moving off the widget.
             --- The former case will crash the script.
 
-            print("focusLoss - " .. tostring(layout.name))
+            --print("focusLoss - " .. tostring(layout.name))
             updateColor(layout, 'default')
             --- This call to update can fail if we're tearing down the window
             --- while the button still has focus.

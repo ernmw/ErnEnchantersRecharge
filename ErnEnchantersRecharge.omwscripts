@@ -1,5 +1,2 @@
-# The ordering of these next two is critical.
-
 PLAYER:scripts/ErnEnchantersRecharge/recharge.lua
-PLAYER:scripts/ErnEnchantersRecharge/purge.lua
 GLOBAL:scripts/ErnEnchantersRecharge/global.lua

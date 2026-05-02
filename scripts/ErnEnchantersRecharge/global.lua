@@ -16,8 +16,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ]]
 local MOD_NAME = require("scripts.ErnEnchantersRecharge.ns")
-local core     = require("openmw.core")
-local world    = require('openmw.world')
 local types    = require('openmw.types')
 
 local function onRecharge(data)

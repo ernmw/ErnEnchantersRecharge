@@ -1,5 +1,12 @@
-name: "ErnEnchantersRecharge"
+name: "Enchanters Recharge"
 description: "Enchanters can recharge your enchanted gear for a small fee."
+
+modSettingsMainTitle: "Enchanters Recharge Settings"
+
+debugMode_name: "Debug Mode"
+debugMode_description: "Turn on verbose logging. Please turn this on and grab the log if you are going to report an issue."
+costScale_name: "Scale Cost"
+costScale_description: "Multiply recharging prices by this value."
 
 # This needs to match the topic in the omwaddon
 rechargeTopic: "recharge your equipment"

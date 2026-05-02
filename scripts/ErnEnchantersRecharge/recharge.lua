@@ -29,6 +29,7 @@ local enchantUtil  = require('scripts.ErnEnchantersRecharge.enchantutil')
 local myui         = require('scripts.ErnEnchantersRecharge.pcp.myui')
 local virtualList  = require("scripts.ErnEnchantersRecharge.VirtualList.virtual_list")
 local keytrack     = require("scripts.ErnEnchantersRecharge.keytrack")
+local settings     = require("scripts.ErnEnchantersRecharge.settings")
 local aux_util     = require('openmw_aux.util')
 
 local interfaces   = require('openmw.interfaces')
@@ -47,7 +48,7 @@ local function cost(charge, capacity, itemCost, enchanter)
     -- costs are plus or minus 50% based on mercantile.
     local playerBarter = pself.type.stats.skills.mercantile(pself).modified
     local enchanterBarter = pself.type.stats.skills.mercantile(enchanter).modified
-    return math.ceil(rechargeCostMult * base *
+    return math.ceil(settings.main.costScale * rechargeCostMult * base *
         util.remap(util.clamp(enchanterBarter / playerBarter, 0, 2), 0, 2, 0.5, 1.5))
 end
 
@@ -104,7 +105,7 @@ local function missingCharge(item, record, enchanter)
         item = item,
         cost = cost(data.enchantmentCharge, capacity, record.value, enchanter)
     }
-    print("item missing charge: " .. aux_util.deepToString(out, 4))
+    settings.debugPrint("item missing charge: " .. aux_util.deepToString(out, 4))
     return out
 end
 
@@ -461,7 +462,7 @@ local stretchPaddingLayout = {
 local function openRechargeWindow(enchanterActor)
     enchanter = enchanterActor
     items = getRechargableItems(enchanter)
-    print("Found " .. #items .. " rechargeable items.")
+    settings.debugPrint("Found " .. #items .. " rechargeable items.")
 
     interfaces.UI.addMode("Interface", { windows = {} })
     -- Note the list must know the sizes involved to do its math.
@@ -519,7 +520,7 @@ end
 local function onUpdateUI()
     updateCurrentGoldElement()
     items = getRechargableItems(enchanter)
-    print("Found " .. #items .. " rechargeable items.")
+    settings.debugPrint("Found " .. #items .. " rechargeable items.")
     itemList:rebuild(#items)
     itemList.visibleRange = nil
     if #items == 0 then
@@ -597,7 +598,6 @@ return {
         [MOD_NAME .. "onUpdateUI"] = onUpdateUI,
         UiModeChanged = UiModeChanged,
         DialogueResponse = function(e)
-            print(e.recordId)
             if e.recordId == topic then
                 openRechargeWindow(e.actor)
             end
@@ -607,7 +607,6 @@ return {
         -- Optional mouse wheel handling for scrolling.
         onMouseWheel = function(vertical, horizontal)
             if itemList then
-                --print("scrollin'")
                 itemList:getMouseWheelHandler()(vertical, horizontal)
             end
         end,

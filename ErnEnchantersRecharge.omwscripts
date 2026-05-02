@@ -1,2 +1,4 @@
+MENU:scripts/ErnEnchantersRecharge/menu_settings.lua
+
 PLAYER:scripts/ErnEnchantersRecharge/recharge.lua
 GLOBAL:scripts/ErnEnchantersRecharge/global.lua

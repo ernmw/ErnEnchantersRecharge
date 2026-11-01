@@ -4,11 +4,16 @@ OpenMW mod that adds an item recharging service to all Enchanters.
 
 ## Installing
 
+**Requires OpenMW-UIToolkit version 1.4.8 or newer** (the recharge window is built with its components). Install it first and make sure its content line comes *before* this mod's.
+
 Download the [latest version here](https://github.com/erinpentecost/ErnEnchantersRecharge/archive/refs/heads/main.zip).
 
 Extract to your `mods/` folder. In your `openmw.cfg` file, add these lines in the correct spots:
 
 ```ini
+data="/wherevermymodsare/mods/OpenMW-UIToolkit-master"
+content=UIToolkit.omwscripts
+
 data="/wherevermymodsare/mods/ErnEnchantersRecharge-main"
 content=ErnEnchantersRecharge.omwscripts
 content=ErnEnchantersRecharge.omwaddon

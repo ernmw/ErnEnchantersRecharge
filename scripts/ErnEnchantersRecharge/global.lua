@@ -29,6 +29,10 @@ local function onRecharge(data)
     itemData.enchantmentCharge = nil
     -- remove the money
     local gold = data.player.type.inventory(data.player):find("gold_001")
+    if gold.count < data.cost then
+        print("not enough money!")
+        return nil
+    end
     gold:remove(data.cost)
     -- notify UI we are done
     data.player:sendEvent(MOD_NAME .. 'onUpdateUI', { item = data.item })
